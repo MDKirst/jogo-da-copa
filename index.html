@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Caça-Níquel Futebol 98 — Web</title>
+<style>
+  :root{
+    --bg:#0c1222;
+    --panel:#101a33;
+    --accent:#21d07a;
+    --accent2:#ffcc00;
+    --danger:#ff3b3b;
+    --led-off:#1b274d;
+    --led-on:#38bdf8;
+    --slot:#0b152b;
+    --cell:#0e1f41;
+    --cell-border:#2c3f73;
+    --win:#1fbf75;
+    --text:#e8f1ff;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial}
+  .wrap{max-width:980px;margin:24px auto;padding:16px}
+  h1{margin:0 0 8px;font-weight:800;letter-spacing:.5px}
+  .subtitle{opacity:.8;margin-bottom:16px}
+  .cabecalho{
+    display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+    background:linear-gradient(180deg,#0e1a39, #0b1328); padding:12px 16px; border:1px solid #2b3b6d; border-radius:14px;
+    box-shadow:0 8px 28px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.03);
+  }
+  .meters{display:flex;gap:12px;flex-wrap:wrap}
+  .chip{
+    display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;
+    background:#0b1734;border:1px solid #223363; min-width:160px; justify-content:center;
+  }
+  .chip strong{font-size:1.1rem}
+  .controls{display:flex;gap:10px;flex-wrap:wrap}
+  .btn{
+    border:1px solid #2b3b6d;border-radius:12px;background:#0b1734;color:var(--text);
+    padding:10px 14px;font-weight:700;cursor:pointer;transition:transform .05s ease, filter .2s;
+    user-select:none;
+  }
+  .btn:hover{filter:brightness(1.1)}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:linear-gradient(180deg,#1eaf68,#12995a);border-color:#1b8d62;color:#04170f}
+  .btn.danger{background:linear-gradient(180deg,#ff6a6a,#ff3b3b);border-color:#c62828;color:#250000}
+  .btn.small{padding:8px 10px;font-weight:600}
+
+  /* Caixa do jogo */
+  .cabinet{
+    position:relative;margin-top:16px;border-radius:18px;border:2px solid #2b3b6d; background:radial-gradient(120% 120% at 50% 0%, #183161 0%, #0b142a 60%);
+    padding:16px; box-shadow:0 18px 38px rgba(0,0,0,.5);
+  }
+  /* moldura led */
+  .led-frame{
+    position:absolute; inset:-10px -10px auto -10px; height:16px; display:flex; gap:8px; justify-content:center;
+  }
+  .led{
+    width:10px; height:10px; border-radius:50%; background:var(--led-off); box-shadow:0 0 0 1px #0a1124 inset;
+    transition:background .08s, box-shadow .08s, filter .08s;
+  }
+  .led.on{ background:var(--led-on); box-shadow:0 0 12px 2px var(--led-on); filter:saturate(1.4)}
+  .led-vertical{ position:absolute; top:6px; bottom:6px; width:16px; display:flex; flex-direction:column; gap:8px;}
+  .led-left{ left:-10px}
+  .led-right{ right:-10px}
+  .led-bottom{ position:absolute; left:-10px; right:-10px; bottom:-10px; height:16px; display:flex; gap:8px; justify-content:center}
+
+  .screen{
+    border-radius:14px; border:2px solid #2b3b6d; background:linear-gradient(180deg,#0c1e47,#0a1733 48%,#081126);
+    padding:16px;
+  }
+  .reels{
+    display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; padding:12px; border-radius:14px;
+    background:linear-gradient(180deg,#0b152b,#0b1224); border:1px solid #223363;
+  }
+  .col{ display:grid; grid-template-rows:repeat(3, 1fr); gap:10px; overflow:hidden}
+  .cell{
+    border:1px solid var(--cell-border); background:linear-gradient(180deg,#0d2146,#0b1836);
+    border-radius:12px; display:flex; align-items:center; justify-content:center;
+    font-size:42px; padding:8px; height:92px; position:relative;
+  }
+  .cell.win{ outline:3px solid var(--win); box-shadow:0 0 16px var(--win) inset, 0 0 10px var(--win)}
+
+  .paybar{
+    margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;
+  }
+  .ticker{
+    flex:1; min-width:240px; background:#0b1734; border:1px solid #26386a; border-radius:12px; padding:8px 12px; height:44px;
+    display:flex; align-items:center; overflow:hidden; white-space:nowrap;
+  }
+  .ticker span{ animation:marquee 18s linear infinite; opacity:.95}
+  @keyframes marquee {
+    0%{ transform:translateX(100%) } 100%{ transform:translateX(-100%) }
+  }
+  .paytable{
+    display:grid; grid-template-columns:repeat(6,1fr); gap:8px; width:100%; margin-top:8px;
+  }
+  .pt{background:#0b1734;border:1px solid #26386a;border-radius:10px;padding:6px 8px;text-align:center;font-size:.92rem}
+  .pt b{font-size:1.1rem}
+
+  .footer{
+    margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between
+  }
+  .note{opacity:.7;font-size:.9rem}
+  .select{
+    display:flex; align-items:center; gap:6px; background:#0b1734; border:1px solid #26386a; border-radius:10px; padding:6px 8px;
+  }
+  .select input{ width:72px; background:transparent; border:none; color:var(--text); font-weight:700; text-align:center; outline:none}
+  .muted{opacity:.6}
+  .hidden{display:none}
+  .shake{animation:shake .2s}
+  @keyframes shake { 0%{transform:translateX(0)} 25%{transform:translateX(-3px)} 75%{transform:translateX(3px)} 100%{transform:translateX(0)} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Caça-Níquel Futebol 98 <span class="muted">— versão HTML/CSS/JS</span></h1>
+  <div class="subtitle">Rolos 3×3, 5 linhas (3 horizontais + 2 diagonais), luzes “roleta de luz” e tema futebol. Código didático para sala de aula. ⚽</div>
+
+  <div class="cabecalho">
+    <div class="meters">
+      <div class="chip"><span>Créditos:</span> <strong id="credits">1000</strong></div>
+      <div class="chip"><span>Aposta:</span> <strong id="bet">10</strong></div>
+      <div class="chip"><span>Último ganho:</span> <strong id="lastwin">0</strong></div>
+    </div>
+    <div class="controls">
+      <button class="btn small" id="bet-">−</button>
+      <button class="btn small" id="bet+">+</button>
+      <button class="btn" id="spin">GIRAR</button>
+      <button class="btn primary" id="autoplay">AUTOPLAY</button>
+      <button class="btn danger" id="reset">RESET</button>
+    </div>
+  </div>
+
+  <div class="cabinet">
+    <!-- moldura de leds (topo, laterais, base) -->
+    <div class="led-frame" id="led-top"></div>
+    <div class="led-vertical led-left" id="led-left"></div>
+    <div class="led-vertical led-right" id="led-right"></div>
+    <div class="led-bottom" id="led-bottom"></div>
+
+    <div class="screen">
+      <div class="reels" id="reels">
+        <div class="col" id="c0"></div>
+        <div class="col" id="c1"></div>
+        <div class="col" id="c2"></div>
+      </div>
+
+      <div class="paybar">
+        <div class="ticker"><span id="ticker">DICA: 3 símbolos iguais em uma linha pagam conforme a tabela. ⚽ 3x paga 10× | 🥅 3x paga 8× | 🏆 3x paga 6× | ⭐ 3x paga 4× | 🎫 3x paga 3× | 7️⃣ 3x paga 20× (raro!)</span></div>
+        <div class="select">
+          Linhas ativas:
+          <button class="btn small" id="lines-">−</button>
+          <input id="lines" value="5" readonly />
+          <button class="btn small" id="lines+">+</button>
+        </div>
+      </div>
+
+      <div class="paytable">
+        <div class="pt">⚽ ×3 = <b>10×</b></div>
+        <div class="pt">🥅 ×3 = <b>8×</b></div>
+        <div class="pt">🏆 ×3 = <b>6×</b></div>
+        <div class="pt">⭐ ×3 = <b>4×</b></div>
+        <div class="pt">🎫 ×3 = <b>3×</b></div>
+        <div class="pt">7️⃣ ×3 = <b>20×</b> <span class="muted">(raro)</span></div>
+      </div>
+
+      <div class="footer">
+        <div class="note">Teclas: <b>Espaço</b> = Girar · <b>A</b> = Autoplay · <b>↑ / ↓</b> = Aposta · <b>← / →</b> = Linhas</div>
+        <div class="note">Projeto didático — sem dinheiro real. Inspire-se e hackeie à vontade. 🛠️</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==========
+   MODELO DO JOGO
+   ========== */
+const SYMBOLS = [
+  {icon:"⚽", weight: 26, pay:10},
+  {icon:"🥅", weight: 20, pay:8},
+  {icon:"🏆", weight: 18, pay:6},
+  {icon:"⭐", weight: 16, pay:4},
+  {icon:"🎫", weight: 14, pay:3},
+  {icon:"7️⃣", weight: 6,  pay:20}, // mais raro, paga mais
+];
+// construção de uma roleta ponderada para sorteio “justo”
+const weightedPool = [];
+SYMBOLS.forEach(s => { for(let i=0;i<s.weight;i++) weightedPool.push(s.icon) });
+
+const creditsEl = document.getElementById('credits');
+const betEl = document.getElementById('bet');
+const lastWinEl = document.getElementById('lastwin');
+const linesEl = document.getElementById('lines');
+const reelsEl = document.getElementById('reels');
+const cols = [...document.querySelectorAll('.col')];
+
+let credits = 1000;
+let bet = 10;
+let lines = 5; // 1..5
+let busy = false;
+let auto = false;
+
+function setCredits(v){ credits=Math.max(0, Math.floor(v)); creditsEl.textContent=credits }
+function setBet(v){ bet=Math.max(1, Math.min(100, Math.floor(v))); betEl.textContent=bet }
+function setLines(v){ lines=Math.max(1, Math.min(5, Math.floor(v))); linesEl.value=lines }
+
+setCredits(credits); setBet(bet); setLines(lines);
+
+/* ==========
+   LEDS ANIMADOS
+   ========== */
+function mountLeds() {
+  const top = document.getElementById('led-top');
+  const left = document.getElementById('led-left');
+  const right = document.getElementById('led-right');
+  const bottom = document.getElementById('led-bottom');
+
+  const nTop=38, nSide=22, nBottom=38;
+  for(let i=0;i<nTop;i++){ top.appendChild(makeLed()) }
+  for(let i=0;i<nSide;i++){ left.appendChild(makeLed()) }
+  for(let i=0;i<nSide;i++){ right.appendChild(makeLed()) }
+  for(let i=0;i<nBottom;i++){ bottom.appendChild(makeLed()) }
+}
+function makeLed(){ const d=document.createElement('div'); d.className='led'; return d }
+mountLeds();
+
+let ledTick=0;
+function tickLeds(){
+  const all=[...document.querySelectorAll('.led')];
+  // liga em “onda”
+  ledTick++;
+  all.forEach((e,i)=>{
+    const on = ((i + ledTick)%8)===0 || ((i+ledTick)%8)===1;
+    e.classList.toggle('on', on);
+  });
+  requestAnimationFrame(tickLeds);
+}
+tickLeds();
+
+/* ==========
+   REELS
+   ========== */
+function randomSymbol(){ return weightedPool[(Math.random()*weightedPool.length)|0] }
+
+function buildGrid(){
+  const g=[[],[],[]]; // 3 colunas × 3 linhas
+  for(let c=0;c<3;c++){
+    for(let r=0;r<3;r++){
+      g[c][r] = randomSymbol();
+    }
+  }
+  return g;
+}
+function drawGrid(grid, wins=[]) {
+  cols.forEach((colEl, c)=>{
+    colEl.innerHTML='';
+    for(let r=0;r<3;r++){
+      const cell = document.createElement('div');
+      cell.className='cell';
+      cell.textContent=grid[c][r];
+      if (wins.some(w=>w.some(([rr,cc])=>rr===r && cc===c))) {
+        cell.classList.add('win');
+      }
+      colEl.appendChild(cell);
+    }
+  });
+}
+
+function spinVisual(grid){
+  // animação simples de “rolar”
+  busy = true;
+  const duration = 900; // ms
+  const start = performance.now();
+  const snapshots = [[],[],[]];
+  for(let c=0;c<3;c++){
+    snapshots[c] = Array.from({length:12}, _=> randomSymbol());
+    snapshots[c].push(grid[c][0],grid[c][1],grid[c][2]);
+  }
+  function frame(t){
+    const p = Math.min(1, (t-start)/duration);
+    cols.forEach((colEl,c)=>{
+      const idx = Math.floor(p*(snapshots[c].length-3)); // mostra 3
+      colEl.innerHTML='';
+      for(let r=0;r<3;r++){
+        const cell = document.createElement('div');
+        cell.className='cell';
+        cell.textContent=snapshots[c][idx+r];
+        colEl.appendChild(cell);
+      }
+    });
+    if(p<1) requestAnimationFrame(frame);
+    else busy=false;
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ==========
+   PAGAMENTOS (5 linhas)
+   ========== */
+const LINES = [
+  // [ [row,col], ... ]
+  [[0,0],[0,1],[0,2]], // topo
+  [[1,0],[1,1],[1,2]], // meio
+  [[2,0],[2,1],[2,2]], // base
+  [[0,0],[1,1],[2,2]], // diagonal principal
+  [[2,0],[1,1],[0,2]], // diagonal invertida
+];
+function symbolPay(icon){
+  return SYMBOLS.find(s=>s.icon===icon)?.pay || 0;
+}
+function evaluate(grid){
+  const active = LINES.slice(0, lines);
+  let total = 0;
+  const winCoords=[];
+  for(const line of active){
+    const [a,b,c] = line.map(([r,col]) => grid[col][r]);
+    if (a===b && b===c){
+      const pay = symbolPay(a);
+      total += pay;
+      winCoords.push(line);
+    }
+  }
+  return {mult: total, wins: winCoords};
+}
+
+/* ==========
+   SONS (WebAudio simples)
+   ========== */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function beep(freq=880, ms=90, gain=.04){
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type='square'; o.frequency.value=freq;
+  g.gain.value=gain;
+  o.connect(g).connect(audioCtx.destination);
+  o.start();
+  setTimeout(()=>{ o.stop(); }, ms);
+}
+function jingleWin(){
+  [660,880,990,1320].forEach((f,i)=> setTimeout(()=>beep(f,80,.05), i*100));
+}
+
+/* ==========
+   LOOP DE JOGO
+   ========== */
+async function spin(){
+  if(busy) return;
+  const cost = bet * lines;
+  if(credits < cost){
+    reelsEl.classList.add('shake');
+    beep(120,150,.06);
+    setTimeout(()=>reelsEl.classList.remove('shake'),180);
+    return;
+  }
+  setCredits(credits - cost);
+  beep(420,120,.04);
+
+  const grid = buildGrid();
+  spinVisual(grid);
+
+  // espera fim da animação
+  await new Promise(res=> setTimeout(res, 950));
+
+  const result = evaluate(grid);
+  drawGrid(grid, result.wins);
+
+  const win = result.mult * bet;
+  setCredits(credits + win);
+  lastWinEl.textContent = win;
+
+  if (win>0) jingleWin();
+  if (auto) setTimeout(spin, 250);
+}
+
+/* ==========
+   UI
+   ========== */
+document.getElementById('spin').addEventListener('click', spin);
+document.getElementById('autoplay').addEventListener('click', ()=>{
+  auto = !auto;
+  document.getElementById('autoplay').classList.toggle('primary', auto);
+  document.getElementById('autoplay').textContent = auto? 'PARAR' : 'AUTOPLAY';
+  if(auto) spin();
+});
+document.getElementById('reset').addEventListener('click', ()=>{
+  setCredits(1000); setBet(10); setLines(5); lastWinEl.textContent='0';
+});
+
+document.getElementById('bet+').addEventListener('click', ()=>{ setBet(bet+1); beep(660,80,.03) });
+document.getElementById('bet-').addEventListener('click', ()=>{ setBet(bet-1); beep(520,80,.03) });
+
+document.getElementById('lines+').addEventListener('click', ()=>{ setLines(lines+1); beep(660,80,.03) });
+document.getElementById('lines-').addEventListener('click', ()=>{ setLines(lines-1); beep(520,80,.03) });
+
+window.addEventListener('keydown', (e)=>{
+  if(e.code==='Space'){ e.preventDefault(); spin() }
+  if(e.key==='a' || e.key==='A'){ document.getElementById('autoplay').click() }
+  if(e.key==='ArrowUp'){ setBet(bet+1) }
+  if(e.key==='ArrowDown'){ setBet(bet-1) }
+  if(e.key==='ArrowLeft'){ setLines(lines-1) }
+  if(e.key==='ArrowRight'){ setLines(lines+1) }
+});
+
+/* Desenha um grid inicial bonito */
+drawGrid([['⭐','⚽','🎫'],['🥅','7️⃣','⭐'],['🏆','⚽','🥅']].map(col=>col.slice()));
+</script>
+</body>
+</html>
